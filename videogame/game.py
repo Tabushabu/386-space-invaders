@@ -1,5 +1,4 @@
 import pygame
-import json
 import random
 from .rgbcolors import BLACK, WHITE
 from .scene import Scene
@@ -59,7 +58,7 @@ class Game:
     def spawn_obstacles(self):
         for i in range(2):
             x = (window_width - (obstacle_width + obstacle_spacing) * 2) // 2 + (obstacle_width + obstacle_spacing) * i
-            y = window_height - obstacle_height - 10
+            y = window_height - obstacle_height - 100
             obstacle = Obstacle(x, y)
             self.all_sprites.add(obstacle)
             self.obstacles.add(obstacle)
@@ -91,12 +90,12 @@ class Game:
             self.lives -= 1
             if self.lives == 0:
                 self.game_over = True
-                self.running = False
             else:
                 self.player.reset_position()
 
         # Check for collision between bullets and obstacles
         pygame.sprite.groupcollide(self.obstacles, self.bullets, False, True)
+        pygame.sprite.groupcollide(self.obstacles, self.enemy_bullets,False, True)
 
         # Check for collision between enemy bullets and player
         hits = pygame.sprite.spritecollide(self.player, self.enemy_bullets, True)
@@ -104,13 +103,26 @@ class Game:
             self.lives -= 1
             if self.lives == 0:
                 self.game_over = True
-                self.running = False
             else:
                 self.player.reset_position()
+
+        if self.game_over:
+            self.running = False  # Set running to False if game over
+
 
     def draw(self, window):
         window.fill(BLACK)
         self.all_sprites.draw(window)
+
+        # Draw score counter
+        font = pygame.font.Font(None, 24)
+        score_text = font.render(f"Score: {self.score}", True, WHITE)
+        window.blit(score_text, (10, 10))
+
+        # Draw life counter
+        lives_text = font.render(f"Lives: {self.lives}", True, WHITE)
+        window.blit(lives_text, (window_width - lives_text.get_width() - 10, 10))
+
         pygame.display.flip()
 
     def game_loop(self, window):
@@ -178,14 +190,19 @@ class Enemy(pygame.sprite.Sprite):
         self.enemy_bullets = enemy_bullets
         self.shoot_delay = random.randint(1000, 3000)
         self.last_shot_time = pygame.time.get_ticks()
+        self.direction = 1  # 1 represents moving to the right, -1 represents moving to the left
 
     def update(self):
-        self.rect.x += enemy_speed
-        if self.rect.right > window_width or self.rect.left < 0:
-            self.rect.y += enemy_height
-            self.rect.x = random.randint(0, window_width - enemy_width)
+        self.rect.x += enemy_speed * self.direction
+
+        # Check if the group of enemies reaches the edge of the window
+        if self.rect.right >= window_width or self.rect.left <= 0:
+            self.direction *= -1  # Reverse the direction
+            self.rect.y += enemy_height  # Move down one unit
 
         self.shoot()
+
+
 
     def shoot(self):
         current_time = pygame.time.get_ticks()
