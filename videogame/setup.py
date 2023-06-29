@@ -1,16 +1,29 @@
-""" Simple setup.py """
+import pygame
+import json
 
-from setuptools import setup
 
-setup_info = {
-    "name": "videogame",
-    "version": "0.1",
-    "description": "A package to support writing games with PyGame",
-    # TODO: Optional, add more information to the setup.py script
-    # "long_description": open("README.md").read(),
-    # "author": "Tuffy Titan",
-    # "author_email": "tuffy@csu.fullerton.edu",
-    # "url": "https://some.url/somehwere/maybe/github",
-}
+window_width = 800
+window_height = 600
+player_width = 50
+player_height = 50
+player_x = window_width // 2 - player_width // 2
+player_y = window_height - player_height - 10
+player_width = 50
+player_height = 50
+player_speed = 5
+enemy_width = 50
+enemy_height = 50
+enemy_speed = 2
+bullet_width = 5
+bullet_height = 20
+bullet_speed = 7
+obstacle_width = 100
+obstacle_height = 20
+obstacle_spacing = 100
 
-setup(**setup_info)
+high_scores = []
+try:
+    with open("high_scores.json") as file:
+        high_scores = json.load(file)
+except FileNotFoundError:
+    pass
