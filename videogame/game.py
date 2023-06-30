@@ -39,7 +39,7 @@ class Game:
         self.spawn_enemies()
         self.spawn_obstacles()
 
-        self.player = Player()
+        self.player = Player(self)
         self.all_sprites.add(self.player)
 
         self.game_loop(window)
@@ -51,9 +51,10 @@ class Game:
             for col in range(4):
                 x = col * (enemy_width + 10)
                 y = row * (enemy_height + 10)
-                enemy = Enemy(x, y + 50, self.enemy_bullets)
+                enemy = Enemy(x, y + 50, self.enemy_bullets, self)
                 self.all_sprites.add(enemy)
                 self.enemies.add(enemy)
+
 
     def spawn_obstacles(self):
         for i in range(2):
@@ -95,7 +96,7 @@ class Game:
 
         # Check for collision between bullets and obstacles
         pygame.sprite.groupcollide(self.obstacles, self.bullets, False, True)
-        pygame.sprite.groupcollide(self.obstacles, self.enemy_bullets,False, True)
+        pygame.sprite.groupcollide(self.obstacles, self.enemy_bullets, False, True)
 
         # Check for collision between enemy bullets and player
         hits = pygame.sprite.spritecollide(self.player, self.enemy_bullets, True)
@@ -108,6 +109,12 @@ class Game:
 
         if self.game_over:
             self.running = False  # Set running to False if game over
+
+        if self.score >= 16 and self.score % 16 == 0 and self.score != self.prev_score:
+            self.lives += 1
+            self.prev_score = self.score
+        elif self.score % 16 != 0:
+            self.prev_score = None
 
 
     def draw(self, window):
@@ -137,8 +144,9 @@ class Game:
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, game):
         pygame.sprite.Sprite.__init__(self)
+        self.game = game
         self.image = pygame.Surface((player_width, player_height))
         self.image.fill(WHITE)
         self.rect = self.image.get_rect()
@@ -155,8 +163,9 @@ class Player(pygame.sprite.Sprite):
 
     def shoot(self):
         bullet = Bullet(self.rect.x + player_width // 2 - bullet_width // 2, self.rect.y, -bullet_speed)
-        game.bullets.add(bullet)
-        game.all_sprites.add(bullet)
+        self.game.bullets.add(bullet)
+        self.game.all_sprites.add(bullet)
+
 
     def reset_position(self):
         self.rect.x = player_x
@@ -180,7 +189,7 @@ class Bullet(pygame.sprite.Sprite):
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y, enemy_bullets):
+    def __init__(self, x, y, enemy_bullets, game):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.Surface((enemy_width, enemy_height))
         self.image.fill(WHITE)
@@ -191,6 +200,8 @@ class Enemy(pygame.sprite.Sprite):
         self.shoot_delay = random.randint(1000, 3000)
         self.last_shot_time = pygame.time.get_ticks()
         self.direction = 1  # 1 represents moving to the right, -1 represents moving to the left
+        self.game = game
+
 
     def update(self):
         self.rect.x += enemy_speed * self.direction
@@ -202,15 +213,14 @@ class Enemy(pygame.sprite.Sprite):
 
         self.shoot()
 
-
-
     def shoot(self):
         current_time = pygame.time.get_ticks()
         if current_time - self.last_shot_time > self.shoot_delay:
             bullet = Bullet(self.rect.x + enemy_width // 2 - bullet_width // 2, self.rect.y + enemy_height, bullet_speed)
             self.enemy_bullets.add(bullet)
-            game.all_sprites.add(bullet)
+            self.game.all_sprites.add(bullet)  # Use self.game instead of game
             self.last_shot_time = current_time
+
 
 
 class Obstacle(pygame.sprite.Sprite):
@@ -221,7 +231,3 @@ class Obstacle(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-
-
-game = Game()
-game.run_game()
