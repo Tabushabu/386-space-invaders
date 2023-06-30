@@ -1,5 +1,9 @@
+import os
+import warnings
+
 import pygame
 import random
+
 from .rgbcolors import BLACK, WHITE
 from .scene import Scene
 from .setup import (
@@ -13,6 +17,8 @@ class Game:
     def __init__(self):
         self.running = True
         self.game_over = False
+        self.start_screen = True
+        self.show_high_scores = False
         self.all_sprites = None
         self.bullets = None
         self.enemies = None
@@ -26,7 +32,7 @@ class Game:
     def run_game(self):
         pygame.init()
 
-        window = pygame.display.set_mode((window_width, window_height))
+        self.window = pygame.display.set_mode((window_width, window_height))
         pygame.display.set_caption("Space Invaders")
 
         self.all_sprites = pygame.sprite.Group()
@@ -42,9 +48,67 @@ class Game:
         self.player = Player(self)
         self.all_sprites.add(self.player)
 
-        self.game_loop(window)
+        while self.running:
+            if self.start_screen:
+                self.show_start_screen()
+            elif self.show_high_scores:
+                self.show_high_score_screen()
+            elif not self.game_over:
+                self.game_loop()
 
         pygame.quit()
+
+    def show_start_screen(self):
+        self.window.fill(BLACK)
+        font = pygame.font.Font(None, 36)
+        title_text = font.render("Space Invaders", True, WHITE)
+        start_text = font.render("Press Enter to Start", True, WHITE)
+        high_score_text = font.render("Press H to View High Scores", True, WHITE)
+        self.window.blit(title_text, (window_width // 2 - title_text.get_width() // 2, 200))
+        self.window.blit(start_text, (window_width // 2 - start_text.get_width() // 2, 300))
+        self.window.blit(high_score_text, (window_width // 2 - high_score_text.get_width() // 2, 350))
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    self.start_screen = False
+                elif event.key == pygame.K_h:
+                    self.show_high_scores = True
+
+    def show_high_score_screen(self):
+        self.window.fill(BLACK)
+        font = pygame.font.Font(None, 36)
+        title_text = font.render("High Scores", True, WHITE)
+        score1_text = font.render("1. Player1 - 1000", True, WHITE)
+        score2_text = font.render("2. Player2 - 800", True, WHITE)
+        score3_text = font.render("3. Player3 - 600", True, WHITE)
+        back_text = font.render("Press B to Go Back", True, WHITE)
+        self.window.blit(title_text, (window_width // 2 - title_text.get_width() // 2, 200))
+        self.window.blit(score1_text, (window_width // 2 - score1_text.get_width() // 2, 300))
+        self.window.blit(score2_text, (window_width // 2 - score2_text.get_width() // 2, 350))
+        self.window.blit(score3_text, (window_width // 2 - score3_text.get_width() // 2, 400))
+        self.window.blit(back_text, (window_width // 2 - back_text.get_width() // 2, 500))
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_b:
+                    self.show_high_scores = False
+
+    def game_loop(self):
+        self.handle_events()
+
+        if not self.game_over:
+            self.update()
+
+        self.draw()
+
+        self.clock.tick(60)
 
     def spawn_enemies(self):
         for row in range(4):
@@ -54,7 +118,6 @@ class Game:
                 enemy = Enemy(x, y + 50, self.enemy_bullets, self)
                 self.all_sprites.add(enemy)
                 self.enemies.add(enemy)
-
 
     def spawn_obstacles(self):
         for i in range(2):
@@ -114,33 +177,17 @@ class Game:
             self.lives += 1
             self.prev_score = self.score
         elif self.score % 16 != 0:
-            self.prev_score = None
+            self.prev_score = 0
 
-
-    def draw(self, window):
-        window.fill(BLACK)
-        self.all_sprites.draw(window)
-
-        # Draw score counter
-        font = pygame.font.Font(None, 24)
-        score_text = font.render(f"Score: {self.score}", True, WHITE)
-        window.blit(score_text, (10, 10))
-
-        # Draw life counter
-        lives_text = font.render(f"Lives: {self.lives}", True, WHITE)
-        window.blit(lives_text, (window_width - lives_text.get_width() - 10, 10))
-
+    def draw(self):
+        self.window.fill(BLACK)
+        self.all_sprites.draw(self.window)
+        font = pygame.font.Font(None, 36)
+        score_text = font.render("Score: " + str(self.score), True, WHITE)
+        lives_text = font.render("Lives: " + str(self.lives), True, WHITE)
+        self.window.blit(score_text, (window_width - score_text.get_width() - 10, 10))
+        self.window.blit(lives_text, (10, 10))
         pygame.display.flip()
-
-    def game_loop(self, window):
-        while self.running:
-            self.handle_events()
-
-            if not self.game_over:
-                self.update()
-
-            self.draw(window)
-            self.clock.tick(60)
 
 
 class Player(pygame.sprite.Sprite):
@@ -152,20 +199,22 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = player_x
         self.rect.y = player_y
+        self.speed = player_speed
 
     def move_left(self):
-        if self.rect.left > 0:
-            self.rect.x -= player_speed
+        self.rect.x -= self.speed
+        if self.rect.x < 0:
+            self.rect.x = 0
 
     def move_right(self):
-        if self.rect.right < window_width:
-            self.rect.x += player_speed
+        self.rect.x += self.speed
+        if self.rect.x > window_width - player_width:
+            self.rect.x = window_width - player_width
 
     def shoot(self):
-        bullet = Bullet(self.rect.x + player_width // 2 - bullet_width // 2, self.rect.y, -bullet_speed)
-        self.game.bullets.add(bullet)
+        bullet = Bullet(self.rect.centerx, self.rect.top)
         self.game.all_sprites.add(bullet)
-
+        self.game.bullets.add(bullet)
 
     def reset_position(self):
         self.rect.x = player_x
@@ -173,54 +222,52 @@ class Player(pygame.sprite.Sprite):
 
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, x, y, speed):
+    def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.Surface((bullet_width, bullet_height))
         self.image.fill(WHITE)
         self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-        self.speed = speed
+        self.rect.centerx = x
+        self.rect.bottom = y
+        self.speed = bullet_speed
 
     def update(self):
-        self.rect.y += self.speed
+        self.rect.y -= self.speed
         if self.rect.bottom < 0:
             self.kill()
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y, enemy_bullets, game):
+    def __init__(self, x, y, bullets, game):
         pygame.sprite.Sprite.__init__(self)
+        self.game = game
         self.image = pygame.Surface((enemy_width, enemy_height))
         self.image.fill(WHITE)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.enemy_bullets = enemy_bullets
-        self.shoot_delay = random.randint(1000, 3000)
-        self.last_shot_time = pygame.time.get_ticks()
-        self.direction = 1  # 1 represents moving to the right, -1 represents moving to the left
-        self.game = game
-
+        self.speed = enemy_speed
+        self.bullets = bullets
+        self.last_shot = pygame.time.get_ticks()
+        self.shoot_delay = 1000
 
     def update(self):
-        self.rect.x += enemy_speed * self.direction
+        self.rect.x += self.speed
+        self.handle_edge_collision()
+        self.try_shoot()
 
-        # Check if the group of enemies reaches the edge of the window
-        if self.rect.right >= window_width or self.rect.left <= 0:
-            self.direction *= -1  # Reverse the direction
-            self.rect.y += enemy_height  # Move down one unit
+    def handle_edge_collision(self):
+        if self.rect.right > window_width or self.rect.left < 0:
+            self.speed *= -1
+            self.rect.y += enemy_height
 
-        self.shoot()
-
-    def shoot(self):
-        current_time = pygame.time.get_ticks()
-        if current_time - self.last_shot_time > self.shoot_delay:
-            bullet = Bullet(self.rect.x + enemy_width // 2 - bullet_width // 2, self.rect.y + enemy_height, bullet_speed)
-            self.enemy_bullets.add(bullet)
-            self.game.all_sprites.add(bullet)  # Use self.game instead of game
-            self.last_shot_time = current_time
-
+    def try_shoot(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_shot > self.shoot_delay and len(self.bullets) < 3:
+            self.last_shot = now
+            bullet = Bullet(self.rect.centerx, self.rect.bottom)
+            self.game.all_sprites.add(bullet)
+            self.bullets.add(bullet)
 
 
 class Obstacle(pygame.sprite.Sprite):
