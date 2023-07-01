@@ -17,6 +17,7 @@ class Game:
     def __init__(self):
         self.running = True
         self.game_over = False
+        self.pause = False
         self.start_screen = True
         self.show_high_scores = False
         self.all_sprites = None
@@ -100,6 +101,7 @@ class Game:
                 if event.key == pygame.K_b:
                     self.show_high_scores = False
 
+    
     def game_loop(self):
         self.clock.tick(60)
 
@@ -136,7 +138,9 @@ class Game:
         enemy_bullet_obstacle_hits = pygame.sprite.groupcollide(self.enemy_bullets, self.obstacles, True, False)
 
         if not self.enemies:
-            self.spawn_enemies()
+            self.pause = True  
+            self.show_pause_screen()  # Show the pause screen when there are no more enemies
+            self.spawn_enemies()  # Respawn enemies after the pause
 
         self.window.fill(BLACK)
         self.all_sprites.draw(self.window)
@@ -154,6 +158,35 @@ class Game:
 
         if self.game_over:
             self.show_game_over_screen()
+
+        # Pause and restart the game
+        if self.game_over or self.start_screen or self.show_high_scores:
+            return
+
+        # Restart the game after the pause
+        if self.pause:
+            self.pause = False
+            self.game_loop()
+
+
+    def show_pause_screen(self):
+        self.window.fill(BLACK)
+        font = pygame.font.Font(None, 36)
+        pause_text = font.render("Congratulations, You Beat The Wave!", True, WHITE)
+        resume_text = font.render("Press any key to start the next Wave", True, WHITE)
+        self.window.blit(pause_text, (window_width // 2 - pause_text.get_width() // 2, 200))
+        self.window.blit(resume_text, (window_width // 2 - resume_text.get_width() // 2, 300))
+        pygame.display.flip()
+
+        pygame.event.clear()  # Clear previous events
+
+        while True:
+            event = pygame.event.wait()
+            if event.type == pygame.QUIT:
+                self.running = False
+                break
+            elif event.type == pygame.KEYDOWN:
+                break
 
 
 
@@ -285,11 +318,3 @@ class Obstacle(pygame.sprite.Sprite):
         self.rect.x = x
         self.rect.y = y
 
-
-def play_game():
-    game = Game()
-    game.run_game()
-
-
-if __name__ == "__main__":
-    play_game()
