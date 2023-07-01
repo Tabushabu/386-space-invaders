@@ -4,7 +4,9 @@ import warnings
 import pygame
 import random
 
-from .rgbcolors import BLACK, WHITE
+
+
+from .rgbcolors import black, white, red, green
 from .scene import Scene
 from .setup import (
     window_width, window_height, player_x, player_y, player_width, player_height, player_speed,
@@ -17,6 +19,7 @@ class Game:
     def __init__(self):
         self.running = True
         self.game_over = False
+        self.restart = False
         self.pause = False
         self.start_screen = True
         self.show_high_scores = False
@@ -56,15 +59,17 @@ class Game:
                 self.show_high_score_screen()
             elif not self.game_over:
                 self.game_loop()
+            elif self.game_over:
+                self.show_game_over_screen()
 
         pygame.quit()
 
     def show_start_screen(self):
-        self.window.fill(BLACK)
+        self.window.fill(black)
         font = pygame.font.Font(None, 36)
-        title_text = font.render("Space Invaders", True, WHITE)
-        start_text = font.render("Press Enter to Start", True, WHITE)
-        high_score_text = font.render("Press H to View High Scores", True, WHITE)
+        title_text = font.render("Space Invaders", True, white)
+        start_text = font.render("Press Enter to Start", True, white)
+        high_score_text = font.render("Press H to View High Scores", True, white)
         self.window.blit(title_text, (window_width // 2 - title_text.get_width() // 2, 200))
         self.window.blit(start_text, (window_width // 2 - start_text.get_width() // 2, 300))
         self.window.blit(high_score_text, (window_width // 2 - high_score_text.get_width() // 2, 350))
@@ -80,13 +85,13 @@ class Game:
                     self.show_high_scores = True
 
     def show_high_score_screen(self):
-        self.window.fill(BLACK)
+        self.window.fill(black)
         font = pygame.font.Font(None, 36)
-        title_text = font.render("High Scores", True, WHITE)
-        score1_text = font.render("1. Player1 - 1000", True, WHITE)
-        score2_text = font.render("2. Player2 - 800", True, WHITE)
-        score3_text = font.render("3. Player3 - 600", True, WHITE)
-        back_text = font.render("Press B to Go Back", True, WHITE)
+        title_text = font.render("High Scores", True, white)
+        score1_text = font.render("1. Player1 - 1000", True, white)
+        score2_text = font.render("2. Player2 - 800", True, white)
+        score3_text = font.render("3. Player3 - 600", True, white)
+        back_text = font.render("Press B to Go Back", True, white)
         self.window.blit(title_text, (window_width // 2 - title_text.get_width() // 2, 200))
         self.window.blit(score1_text, (window_width // 2 - score1_text.get_width() // 2, 250))
         self.window.blit(score2_text, (window_width // 2 - score2_text.get_width() // 2, 300))
@@ -105,11 +110,12 @@ class Game:
     def game_loop(self):
         self.clock.tick(60)
 
+        keys = pygame.key.get_pressed()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
 
-        keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
             self.player.move_left()
         if keys[pygame.K_RIGHT]:
@@ -142,9 +148,9 @@ class Game:
             self.show_pause_screen()  # Show the pause screen when there are no more enemies
             self.spawn_enemies()  # Respawn enemies after the pause
 
-        self.window.fill(BLACK)
+        self.window.fill(black)
         self.all_sprites.draw(self.window)
-        self.draw_text(f"Score: {self.score}", 25, WHITE, 50, 10)
+        self.draw_text(f"Score: {self.score}", 25, white, 50, 10)
 
         # Gain 1 life every 16 points
         if self.score >= 16 and self.score % 16 == 0 and self.score != self.prev_score:
@@ -153,7 +159,7 @@ class Game:
         elif self.score % 16 != 0:
             self.prev_score = 0
 
-        self.draw_text(f"Lives: {self.lives}", 25, WHITE, window_width - 50, 10)
+        self.draw_text(f"Lives: {self.lives}", 25, white, window_width - 50, 10)
         pygame.display.flip()
 
         if self.game_over:
@@ -170,10 +176,10 @@ class Game:
 
 
     def show_pause_screen(self):
-        self.window.fill(BLACK)
+        self.window.fill(black)
         font = pygame.font.Font(None, 36)
-        pause_text = font.render("Congratulations, You Beat The Wave!", True, WHITE)
-        resume_text = font.render("Press any key to start the next Wave", True, WHITE)
+        pause_text = font.render("Congratulations, You Beat The Wave!", True, white)
+        resume_text = font.render("Press any key to start the next Wave", True, white)
         self.window.blit(pause_text, (window_width // 2 - pause_text.get_width() // 2, 200))
         self.window.blit(resume_text, (window_width // 2 - resume_text.get_width() // 2, 300))
         pygame.display.flip()
@@ -211,20 +217,36 @@ class Game:
             self.obstacles.add(obstacle)
 
     def show_game_over_screen(self):
-        self.window.fill(BLACK)
+        self.window.fill(black)
         font = pygame.font.Font(None, 36)
-        game_over_text = font.render("Game Over", True, WHITE)
-        restart_text = font.render("Press Enter to Restart", True, WHITE)
+        game_over_text = font.render("Game Over", True, white)
+        restart_text = font.render("Press Enter to Restart", True, white)
         self.window.blit(game_over_text, (window_width // 2 - game_over_text.get_width() // 2, 200))
         self.window.blit(restart_text, (window_width // 2 - restart_text.get_width() // 2, 300))
         pygame.display.flip()
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
+        while self.game_over:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
                     self.game_over = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        self.restart_game()
+
+    def restart_game(self):
+        self.game_over = False
+        self.all_sprites.empty()
+        self.bullets.empty()
+        self.enemies.empty()
+        self.enemy_bullets.empty()
+        self.obstacles.empty()
+        self.score = 0
+        self.lives = 3
+        self.spawn_enemies()
+        self.spawn_obstacles()
+        self.player = Player(self)
+        self.all_sprites.add(self.player)
 
 
 class Player(pygame.sprite.Sprite):
@@ -232,7 +254,7 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
         self.game = game
         self.image = pygame.Surface((player_width, player_height))
-        self.image.fill(WHITE)
+        self.image.fill(white)
         self.rect = self.image.get_rect()
         self.rect.x = player_x
         self.rect.y = player_y
@@ -264,12 +286,15 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
         super().__init__()
         self.game = game
+        self.radius = enemy_width // 2
         self.image = pygame.Surface((enemy_width, enemy_height))
-        self.image.fill(WHITE)
+        #self.image.fill((red))
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
         self.x_direction = 1
+
+        pygame.draw.circle(self.image, (255, 0, 0), (self.radius, self.radius), self.radius)
 
     def update(self):
         self.rect.x += enemy_speed * self.x_direction
@@ -293,7 +318,7 @@ class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, direction):
         super().__init__()
         self.image = pygame.Surface((bullet_width, bullet_height))
-        self.image.fill(WHITE)
+        self.image.fill(white)
         self.rect = self.image.get_rect()
         self.rect.x = x - bullet_width // 2
         self.rect.y = y
@@ -313,7 +338,7 @@ class Obstacle(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
         self.image = pygame.Surface((obstacle_width, obstacle_height))
-        self.image.fill(WHITE)
+        self.image.fill(green)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
