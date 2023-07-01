@@ -1,10 +1,15 @@
+# Kyler Farnsworth
+# KFarnsworth1@csu.fullerton.edu
+# @Tabushabu
+
 import os
 import warnings
 
 import pygame
 import random
 
-
+from pygame.mixer import Sound, get_init, pre_init
+import numpy as np
 
 from .rgbcolors import black, white, red, green
 from .scene import Scene
@@ -32,9 +37,26 @@ class Game:
         self.lives = 3
         self.player = None
         self.clock = pygame.time.Clock()
+        self._soundtrack = None
+        
+
+        self._main_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        self._data_dir = os.path.join(self._main_dir, "videogame", "data")
 
     def run_game(self):
-        pygame.init()
+        pygame.init() 
+        pygame.mixer.init()
+
+        #pygame.time.wait(int(duration * 1000))
+        self._soundtrack = os.path.join(self._data_dir, "Tax_Evasion.mp3") 
+
+        try:
+            pygame.mixer.music.load(self._soundtrack)
+            pygame.mixer.music.set_volume(0.2)
+        except pygame.error as pygame_error:
+            print("Cannot open the mixer?")
+            raise SystemExit("broken!!") from pygame_error
+        pygame.mixer.music.play(-1)
 
         self.window = pygame.display.set_mode((window_width, window_height))
         pygame.display.set_caption("Space Invaders")
@@ -64,15 +86,18 @@ class Game:
 
         pygame.quit()
 
+
     def show_start_screen(self):
         self.window.fill(black)
         font = pygame.font.Font(None, 36)
         title_text = font.render("Space Invaders", True, white)
+        tutorial_text = font.render("Left/Right arrows to move, space to Shoot", True, white)
         start_text = font.render("Press Enter to Start", True, white)
-        high_score_text = font.render("Press H to View High Scores", True, white)
+        high_score_text = font.render("Press H then enter to View High Scores", True, white)
         self.window.blit(title_text, (window_width // 2 - title_text.get_width() // 2, 200))
         self.window.blit(start_text, (window_width // 2 - start_text.get_width() // 2, 300))
-        self.window.blit(high_score_text, (window_width // 2 - high_score_text.get_width() // 2, 350))
+        self.window.blit(tutorial_text, (window_width // 2 - tutorial_text.get_width() // 2, 350))
+        self.window.blit(high_score_text, (window_width // 2 - high_score_text.get_width() // 2, 400))
         pygame.display.flip()
 
         for event in pygame.event.get():
@@ -277,6 +302,18 @@ class Player(pygame.sprite.Sprite):
             self.rect.x = window_width - player_width
 
     def shoot(self):
+        sample_rate = 44100
+        duration = 0.01
+        frequency = 440
+
+        t = np.linspace(0, duration, int(sample_rate * duration))
+        audio_data = np.zeros((len(t), 2), dtype=np.int16)
+        audio_data[:, 0] = (np.sin(2 * np.pi * frequency * t) * 32767).astype(np.int16)
+        audio_data[:, 1] = audio_data[:, 0]
+
+
+        sound = pygame.sndarray.make_sound(audio_data)
+        sound.play()
         bullet = Bullet(self.rect.centerx, self.rect.top, "up")
         self.game.all_sprites.add(bullet)
         self.game.bullets.add(bullet)
@@ -294,7 +331,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.y = y
         self.x_direction = 1
 
-        pygame.draw.circle(self.image, (255, 0, 0), (self.radius, self.radius), self.radius)
+        pygame.draw.circle(self.image, (red), (self.radius, self.radius), self.radius)
 
     def update(self):
         self.rect.x += enemy_speed * self.x_direction
@@ -309,6 +346,19 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.y += enemy_height
 
     def shoot(self):
+
+        sample_rate = 44100
+        duration = 0.05
+        frequency = 200
+
+        t = np.linspace(0, duration, int(sample_rate * duration))
+        audio_data = np.zeros((len(t), 2), dtype=np.int16)
+        audio_data[:, 0] = (np.sin(2 * np.pi * frequency * t) * 32767).astype(np.int16)
+        audio_data[:, 1] = audio_data[:, 0]
+
+        sound = pygame.sndarray.make_sound(audio_data)
+        sound.play()
+
         bullet = Bullet(self.rect.centerx, self.rect.bottom, "down")
         self.game.all_sprites.add(bullet)
         self.game.enemy_bullets.add(bullet)

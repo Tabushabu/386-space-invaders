@@ -1,3 +1,7 @@
+# Kyler Farnsworth
+# KFarnsworth1@csu.fullerton.edu
+# @Tabushabu
+
 import pygame
 
 
